@@ -25,29 +25,31 @@ I'd recommend following all sections below on a VM for your first time before do
 
 ### Install VirtualBox
 1. Download and install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
-    ```
+    ``` sh
     brew cask install virtualbox
     ```
 ### Create a new VM
-1. Launch VirtualBox, click `New`</br></br>**Type:** `Linux`</br>**Version:** `Ubuntu (64-bit)`</br>
-![](assets/vb-new.png)
+1. Launch VirtualBox, click `New`:</br></br>**Type:** `Linux`</br>**Version:** `Ubuntu (64-bit)`
+    ![](assets/vb-new.png)
 1. Continue with defaults (which should include a **10 GB** virtual drive)
 
 ### Configure and Launch new VM
 1. Select VM from step above and click `Settings`
 2. Navigate to **System > Motherboard** 
-3. Check `Enable EFI (special OSes only)`</br>
-![](assets/vb-mobo.png)
-4. Navigate to **Storage** and attach `ubuntu-20.04-desktop-amd64.iso` as a new Optical Drive
-![](assets/vb-storage.png)
-1. [optional] Increase VM performance 
+3. Check `Enable EFI (special OSes only)`
+    ![](assets/vb-mobo.png)
+4. Navigate to **Storage** and attach `ubuntu-20.04-desktop-amd64.iso` as a new Optical Drive:
+    ![](assets/vb-storage.png)
+5. Navigate to **Network** and change to `Bridged Adapter` so the VM will get an IP Address from your router instead of your computer:
+    ![](assets/vb-bridged.png)
+6. [optional] Increase VM performance 
    > I put my numbers below but do what suites you
    
    **Base Memory:** `2048 MB`</br>**Processor(s)** `4`</br>**Video Memory:** `128 MB`
-2. Click `OK` to save settings
-3. Click `Start`
-4.  [optional] Change VM to Scaled Mode (View > Scaled Mode) for a better viewing experience
-5.  You should be off to the races 🏇</br>
+7. Click `OK` to save settings
+8. Click `Start`
+9.  [optional] Change VM to Scaled Mode (View > Scaled Mode) for a better viewing experience
+10. You should be off to the races 🏇</br>
 ![](assets/vb-launch.png)
 
 </p></details>
@@ -75,7 +77,7 @@ By the end of this section you should have a bare bones Ubuntu system up and run
 
 ### Create Disk Partitions
 1. Launch `parted` in interactive sudo to setup a `GPT` partition table and create our three partitions: `EFI`, `/boot`, and `/`.</br>
-    ```
+    ``` sh
     parted /dev/sda
         mklabel gpt
         mkpart primary 1MiB 513MiB
@@ -89,36 +91,36 @@ By the end of this section you should have a bare bones Ubuntu system up and run
 
 ### Setup LUKS Disk Encryption on `/` partition
 1. Setup encryption on `/` partition:
-    ```
+    ``` sh
     cryptsetup luksFormat /dev/sda3
     ```
     > **Use a strong passphrase**: This passphrase is what will be used to unlock your disk encryption in the future – avoid brute force attacks and use something long and strong 😘.
     
     > If you on on VirtualBox, you may get a `Killed` response with a screen flicker, this means luksFormat failed. Try with `--pbkdf-memory 256` to reduce the required memory – not recommended if you can avoid it. 
 2. Open your newly created LUKS `/` partition:
-   ```
+   ``` sh
    cryptsetup luksOpen /dev/sda3 sda3_crypt
    ```
    > This will mount an LVM at `/dev/mapper/sda3_crypt` which is affectively your decrypted partition.
 
 ### Format Disk Partitions
 1. Format `EFI` partition:
-    ```
+    ``` sh
     mkfs.vfat -F 32 /dev/sda1
     ```
 2. Format `/boot` partition:
-    ```
+    ``` sh
     mkfs.btrfs /dev/sda2
     ```
 1. Format `/` partition:
-    ```
+    ``` sh
     mkfs.btrfs /dev/mapper/sda3_crypt
     ```
     > You do not want to use `/dev/sda3` here because it's encrypted.
 
 ### Install Ubuntu 👨‍💻
 1. Launch Ubuntu Installer from interactive sudo terminal
-   ```
+   ``` sh
    ubiquity
    ```
    ![](assets/installer.png)
@@ -143,27 +145,53 @@ By the end of this section you should have a bare bones Ubuntu system up and run
     ![](assets/initramfs.png)
 2. Perform the following commands to boot into Ubuntu:
    1. Open the encrypted `/` partition
-       ```
+       ``` sh
        cryptsetup luksOpen /dev/sda3 sda3_crypt
        ```
    2. Scan for the `/` partition filesystem
-       ```
+       ``` sh
        btrfs device scan
        ```
    3. Exit to continue the booting process
-       ```
+       ``` sh
        exit
        ```
     ![](assets/manualboot.png)
 3. If all's good, you should be loaded to Ubuntu!</br>
 ![](assets/booted.png)
-4. [optional] Trim down on GRUB start time from `30s` to `2s` like default</br>
+
+### Enable SSH
+1. Upgrade packages, install a couple more, and enable ssh access:
+    ``` sh
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt install -y net-tools openssh-server curl
     ```
+2. Add filewall rule for ssh:
+    ``` sh
+    sudo ufw allow ssh
+    ```
+3. Setup `authorized_keys` to gate ssh access:
+    ``` sh
+    mkdir ~/.ssh
+    echo "YOUR_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+    ```
+    > Read more about [ssh-keygen](https://www.ssh.com/ssh/keygen/) if needed.
+4. You should now be able to ssh into your Ubuntu system:
+    ``` sh
+    ssh binaryshrub@192.168.1.109
+    ```
+    > Use `ifconfig` if you need to find the IP Address.
+
+### Additional Configuration
+1. [optional] If you are on VirtualBox, you should now install `VirtualBox Guest Additions` and `disable Scaled Mode` to make your experience better.
+2. [optional] Trim down on GRUB start time from `30s` to `2s` like default</br>
+    ``` sh
     sudo sh -c 'echo GRUB_RECORDFAIL_TIMEOUT=2 >> /etc/default/grub'
     sudo update-grub
     ```
     ![](assets/grubtimeout.png)
-5. [optional] If you are on VirtualBox, you should now install `VirtualBox Guest Additions` and `disable Scaled Mode` to make your experience better.
+
 
 </p></details>
 
