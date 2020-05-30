@@ -8,7 +8,7 @@ This guide walks you through setting up [Ubuntu 20.04 LTS](https://wiki.ubuntu.c
 ### Table of Contents
 * [[optional] Setup VirtualBox](#[optional]-Setup-VirtualBox)
 * [Install Ubuntu 20.04 on BTRFS with LUKS](#Install-Ubuntu-20.04-on-BTRFS-with-LUKS)
-* [Configure Dropbear SSH Client on `/boot` Partition](#Configure-Dropbear-SSH-Client-on-`/boot`-Partition)
+* [Configure `/boot` SSH Client with Dropbear for Remote Unlock](#Configure-`/boot`-SSH-Client-with-Dropbear-for-Remote-Unlock)
 * [Dynamically add Drive(s) with BTRFS and RAID](#Dynamically-add-Drive(s)-with-BTRFS-and-RAID)
 
 
@@ -165,7 +165,7 @@ By the end of this section you should have a bare bones Ubuntu system up and run
     ``` sh
     sudo apt update
     sudo apt upgrade -y
-    sudo apt install -y net-tools openssh-server curl
+    sudo apt install -y net-tools openssh-server curl vim
     ```
 2. Add filewall rule for ssh:
     ``` sh
@@ -199,11 +199,65 @@ By the end of this section you should have a bare bones Ubuntu system up and run
 
 ---
 
-## Configure Dropbear SSH Client on `/boot` Partition
+## Configure `/boot` SSH Client with Dropbear for Remote Unlock
 
-> COMING SOON!
+In this section you will be setting up a helper script and an SSH Client that is put inside `initramfs` which is called by GRUB when booting. This will allow you to remotely unlock your encrypted partitions 👏 (via ssh) to ensure a display-less experience even on reboot or power on 🎉.
 
-> See [btrfs-luks-unlocker.sh](https://github.com/BinaryShrub/ubuntu-btrfs-luks/blob/master/scripts/btrfs-luks-unlocker.sh) using [dropbear-initramfs](https://packages.ubuntu.com/focal/net/dropbear-initramfs) for a sneak peak...
+<details><summary><span style="font-weight:bold">CLICK HERE</span> to Configure /boot SSH Client with Dropbear for Remote Unlock</summary><p>
+
+### Download and Execute `btrfs-luks-unlocker.sh`
+
+The following script will setup the ssh client for you, add an `unlock` script, and grant access to `~/.ssh/authorized_keys`:
+``` sh
+cd ~
+curl https://raw.githubusercontent.com/BinaryShrub/ubuntu-btrfs-luks/master/scripts/btrfs-luks-unlocker.sh -o btrfs-luks-unlocker.sh
+sudo chmod +x btrfs-luks-unlocker.sh
+./btrfs-luks-unlocker.sh
+```
+> WARNING: You will need to rerun this script on `~/.ssh/authorized_keys` change if you want the new users to have access to connect.
+
+> WARNING: You will need to update `btrfs-luks-unlocker.sh` to include all drives that should be unlocked. Look for the line with `cryptsetup luksOpen` and change/duplicate accordingly.
+
+### Reboot and SSH into `/boot`
+After this script has executed, you should now be able to ssh into the system on reboot. To do this you must explicitly use the `root` user like so:
+``` sh
+ssh root@192.168.1.109
+```
+> Do not change user, `root` is what you want.
+
+### Execute `unlock` when in initramfs
+Once you have successfully connected to initramfs (from the step above) you will now have access to the `unlock` script to help make unlocking easier for you:
+
+``` sh
+ssh root@192.168.1.109
+
+
+BusyBox v1.30.1 (Ubuntu 1:1.30.1-4ubuntu6) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+# unlock
+Enter passphrase for /dev/sda3: 
+Scanning for Btrfs filesystems
+
+⏳ Booting ...
+
+# Connection to 192.168.1.109 closed by remote host.
+Connection to 192.168.1.109 closed.
+```
+
+You can also access this script with `./unlock` to make it easier to remember if you forget 😇:
+``` sh
+ssh root@192.168.1.109       
+
+
+BusyBox v1.30.1 (Ubuntu 1:1.30.1-4ubuntu6) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+# ls
+unlock
+# ▉
+```
+</p></details>
 
 <br/>
 
