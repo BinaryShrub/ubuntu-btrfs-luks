@@ -264,7 +264,84 @@ unlock
 ---
 ## Dynamically add Drive(s) with BTRFS and RAID
 
-> COMING SOON!
+In this section we will go over adding additional drives and configuring RAID. To start we will add 1 additional drive (for a total of 2) and setup `RAID1`, then we will add a 3rd drive and setup `RAID5`
+
+<details><summary><span style="font-weight:bold">CLICK HERE</span> to Dynamically add Drive(s) with BTRFS and RAID</summary><p>
+
+### Understand your existing filesystem
+The following commands give you some basic information about the btrfs mount points and the devices they include:
+
+1.  ``` sh
+    sudo btrfs fi show
+    ```
+2.  ``` sh
+    findmnt -nt btrfs
+    ```
+
+![](assets/driveinfo.png)
+
+### Add a new LUKS Drive
+
+1. Be sure your new drive is attached to the system and verify with `lsblk`
+    > If you are using VirtualBox you can create another `10 GB` drive in settings, under **Storage** after shutting down your VM
+
+    ![](assets/newdrive.png)
+
+2. Create partition:
+    ``` sh
+    sudo parted /dev/sdb
+        mklabel gpt
+        mkpart primary 1MiB 100%
+        print
+        quit
+    ```
+
+3. Format for LUKS:
+    ``` sh
+    sudo cryptsetup luksFormat /dev/sdb1
+    ```
+    > You can either use the same passphrase as `/dev/sda3` or something different
+
+    > If you on on VirtualBox, you may get a `Killed` response with a screen flicker, this means luksFormat failed. Try with `--pbkdf-memory 256` to reduce the required memory – not recommended if you can avoid it. 
+
+4. Open your newly created LUKS partition:
+   ``` sh
+   sudo cryptsetup luksOpen /dev/sdb1 sdb1_crypt
+   ```
+
+5. Add a line to `btrfs-luks-unlocker.sh` for your new drive so you will be promted to unlock it on reboot:
+    ``` sh
+    # Add line to `btrfs-luks-unlocker.sh`
+    # /sbin/cryptsetup luksOpen /dev/sdb1 sdb1_crypt
+
+    # Execute scrip to update
+    ~/btrfs-luks-unlocker.sh
+    ```
+    ![](assets/scriptdriveupdate.png)
+
+6. Add new drive to the `/` BTRFS mount point and configure for `RAID1`:
+    ``` sh
+    sudo btrfs device add /dev/mapper/sdb1_crypt /
+    ``` 
+
+7. Balance the new drive with the existing:</br></br>
+    For 2 Drives use `RAID1`:
+    ```
+    sudo btrfs balance start -dconvert=raid1 -mconvert=raid1 /
+    ```
+
+    For 3+ Drives use `RAID5`:
+    ``` sh
+    sudo btrfs balance start -dconvert=raid5 -mconvert=raid5 /
+    ```
+8. Monitor balance status:
+    ``` sh
+    sudo btrfs balance status /
+    ```
+
+Once completed you should have a nice multi-drive setup 👏.
+
+</p></details>
 
 <br/>
 
