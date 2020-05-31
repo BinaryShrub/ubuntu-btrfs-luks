@@ -89,6 +89,18 @@ By the end of this section you should have a bare bones Ubuntu system up and run
 
     ![](assets/parted.png)
 
+    > If you dont have a UEFI system (BIOS, like myself) then you will need to do something slightly different for the first partition:
+    > ``` sh
+    > parted /dev/sda
+    >   mklabel gpt
+    >    mkpart primary 1MiB 2MiB
+    >    set 1 bios_grub on
+    >    mkpart primary 2MiB 514MiB
+    >    mkpart primary 514MiB 100%
+    >    print
+    >    quit
+    >    ```
+
 ### Setup LUKS Disk Encryption on `/` partition
 1. Setup encryption on `/` partition:
     ``` sh
@@ -108,6 +120,7 @@ By the end of this section you should have a bare bones Ubuntu system up and run
     ``` sh
     mkfs.vfat -F 32 /dev/sda1
     ```
+    > Skip this if you are going the BIOS route.
 2. Format `/boot` partition:
     ``` sh
     mkfs.btrfs /dev/sda2
@@ -128,7 +141,7 @@ By the end of this section you should have a bare bones Ubuntu system up and run
     ![](assets/installtype.png)
 3. We are now going to tell the Ubuntu installer how/where we want our installation:
     1. Select `/dev/sda1`, press the Change button. Choose Use as `EFI System Partition`.</br>
-        > If this is not an option, you probably didn't boot with UEFI Support in VirtualBox or your System doesnt support UEFI 🙁
+        > If this is not an option, you probably didn't boot with UEFI Support in VirtualBox or your System doesnt support UEFI 🙁 and you will need to go with a BIOS option as discussed above.
     2. Select `/dev/sda2`, press the Change button. Choose Use as `btrfs journaling filesystem`, check `Format`, and use `/boot` as Mount point.
     3. Select `/dev/mapper/sda3_crypt`, press the Change button. Choose Use as `btrfs journaling filesystem`, check `Format`, and use `/` as Mount point.
    
