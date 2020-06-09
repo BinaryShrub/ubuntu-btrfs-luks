@@ -345,7 +345,7 @@ The following commands give you some basic information about the btrfs mount poi
 
     For 3+ Drives use `RAID5`:
     ``` sh
-    sudo btrfs balance start -dconvert=raid5 -mconvert=raid5 /
+    sudo btrfs balance start -dconvert=raid5 -mconvert=raid1c3 /
     ```
 8. Monitor balance status:
     ``` sh
